@@ -13,13 +13,22 @@ resource "docker_network" "jenkins" {
   name = "jenkins-network"
 }
 
+resource "docker_volume" "docker_certs" {
+  name = "jenkins-docker-certs"
+}
+
+
+
 resource "docker_container" "dind" {
   name  = "jenkins-docker"
   image = "docker:dind"
   privileged = true
 
   env = [
-    "DOCKER_TLS_CERTDIR=/certs"
+    "DOCKER_TLS_CERTDIR=/certs",
+    "DOCKER_CERT_PATH=/certs/client",
+    "DOCKER_HOST=tcp://0.0.0.0:2376",
+    "DOCKER_TLS_VERIFY=1"
   ]
 
   networks_advanced {
@@ -29,9 +38,15 @@ resource "docker_container" "dind" {
 
   volumes {
     volume_name    = "jenkins-docker-certs"
-    container_path = "/certs/client"
+    container_path = "/certs"
+  }
+
+  ports {
+    internal = 2376
+    external = 2376
   }
 }
+
 
 resource "docker_container" "jenkins" {
   name  = "jenkins-blueocean"
@@ -39,7 +54,7 @@ resource "docker_container" "jenkins" {
   restart = "on-failure"
 
   env = [
-    "DOCKER_HOST=tcp://docker:2376",
+    "DOCKER_HOST=tcp://jenkins-docker:2376",
     "DOCKER_CERT_PATH=/certs/client",
     "DOCKER_TLS_VERIFY=1"
   ]
@@ -54,7 +69,11 @@ resource "docker_container" "jenkins" {
   }
 
   volumes {
-    volume_name    = "jenkins-data"
-    container_path = "/var/jenkins_home"
+    volume_name    = "jenkins-docker-certs"
+    container_path = "/certs/client"
   }
+
+  depends_on = [docker_container.dind]
 }
+
+
