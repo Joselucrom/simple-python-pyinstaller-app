@@ -48,6 +48,7 @@ resource "docker_container" "dind" {
 }
 
 
+
 resource "docker_container" "jenkins" {
   name  = "jenkins-blueocean"
   image = "myjenkins-blueocean"
@@ -69,11 +70,18 @@ resource "docker_container" "jenkins" {
   }
 
   volumes {
+    volume_name    = "jenkins-data"
+    container_path = "/var/jenkins_home"
+  }
+
+    volumes {
     volume_name    = "jenkins-docker-certs"
     container_path = "/certs/client"
   }
 
+
   depends_on = [docker_container.dind]
 }
+
 
 
